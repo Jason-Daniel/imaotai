@@ -6,13 +6,11 @@
       </keep-alive>
     </transition>
     <iframe-toggle />
-    <div>{{ ttt }}</div>
   </section>
 </template>
 
 <script>
 import iframeToggle from "./IframeToggle/index";
-import watermark from "watermark-dom";
 
 export default {
   name: "AppMain",
