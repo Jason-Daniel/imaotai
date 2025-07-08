@@ -9,8 +9,9 @@ on:
           type: string
 
 env:
-  API_WORKING_DIR: campus-modular
-  WEB_WORKING_DIR: vue_campus_admin
+  API_WORKING_DIR: imaotai
+  # WEB_WORKING_DIR: vue_campus_admin
+  WEB_WORKING_DIR: imaotai_admin
 
 jobs:
   release:
@@ -81,10 +82,10 @@ jobs:
         run: |
           npm run build:prod
 
-      - name: Tar dist file
+      - name: Tar  file
         working-directory: ${{ env.WEB_WORKING_DIR }}
         run: |
-          tar -czvf dist_${{ env.RELEASE_VERSION }}.tar.gz dist
+          tar -czvf _${{ env.RELEASE_VERSION }}.tar.gz 
 
       
       # 上传文件并发布 Release
