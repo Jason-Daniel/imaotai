@@ -9,9 +9,8 @@ on:
           type: string
 
 env:
-  API_WORKING_DIR: imaotai
-  # WEB_WORKING_DIR: vue_campus_admin
-  WEB_WORKING_DIR: imaotai_admin
+  API_WORKING_DIR: campus-modular
+  WEB_WORKING_DIR: vue_campus_admin
 
 jobs:
   release:
