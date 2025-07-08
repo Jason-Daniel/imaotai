@@ -13,6 +13,7 @@ import cn.hutool.http.Method;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.oddfar.campus.business.domain.IMTCacheConstants;
 import com.oddfar.campus.business.entity.IUser;
 import com.oddfar.campus.business.mapper.IUserMapper;
 import com.oddfar.campus.business.service.IMTLogFactory;
@@ -40,6 +41,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Random;
 
 @Service
 public class IMTServiceImpl implements IMTService {
@@ -79,7 +81,7 @@ public class IMTServiceImpl implements IMTService {
 
     @Override
     public String getMTVersion() {
-        String mtVersion = Convert.toStr(redisCache.getCacheObject("mt_version"));
+        String mtVersion = Convert.toStr(redisCache.getCacheObject(IMTCacheConstants.MT_VERSION));
         if (StringUtils.isNotEmpty(mtVersion)) {
             return mtVersion;
         }
@@ -91,7 +93,7 @@ public class IMTServiceImpl implements IMTService {
             mtVersion = matcher.group(1);
             mtVersion = mtVersion.replace("版本 ", "");
         }
-        redisCache.setCacheObject("mt_version", mtVersion);
+        redisCache.setCacheObject(IMTCacheConstants.MT_VERSION, mtVersion);
 
         return mtVersion;
 
@@ -99,7 +101,7 @@ public class IMTServiceImpl implements IMTService {
 
     @Override
     public void refreshMTVersion() {
-        redisCache.deleteObject("mt_version");
+        redisCache.deleteObject(IMTCacheConstants.MT_VERSION);
         getMTVersion();
     }
 
@@ -107,8 +109,9 @@ public class IMTServiceImpl implements IMTService {
     public Boolean sendCode(String mobile, String deviceId) {
         Map<String, Object> data = new HashMap<>();
         data.put("mobile", mobile);
-        data.put("md5", signature(mobile));
-        data.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        final long curTime = System.currentTimeMillis();
+        data.put("md5", signature(mobile, curTime));
+        data.put("timestamp", String.valueOf(curTime));
 //        data.put("MT-APP-Version", MT_VERSION);
 
         HttpRequest request = HttpUtil.createRequest(Method.POST,
@@ -141,9 +144,10 @@ public class IMTServiceImpl implements IMTService {
         map.put("mobile", mobile);
         map.put("vCode", code);
 
-        map.put("md5", signature(mobile + code + "" + ""));
+        final long curTime = System.currentTimeMillis();
+        map.put("md5", signature(mobile + code + "" + "", curTime));
 
-        map.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        map.put("timestamp", String.valueOf(curTime));
         map.put("MT-APP-Version", getMTVersion());
 
         HttpRequest request = HttpUtil.createRequest(Method.POST,
@@ -189,6 +193,11 @@ public class IMTServiceImpl implements IMTService {
                 //预约
                 JSONObject json = reservation(iUser, itemId, shopId);
                 logContent += String.format("[预约项目]：%s\n[shopId]：%s\n[结果返回]：%s\n\n", itemId, shopId, json.toString());
+
+                //随机延迟3～5秒
+                Random random = new Random();
+                int sleepTime = random.nextInt(3) + 3;
+                Thread.sleep(sleepTime * 1000);
             } catch (Exception e) {
                 logContent += String.format("执行报错--[预约项目]：%s\n[结果返回]：%s\n\n", itemId, e.getMessage());
             }
@@ -233,8 +242,9 @@ public class IMTServiceImpl implements IMTService {
         new Thread(runnable).start();
 
     }
+
     // 领取小茅运
-    public void receiveReward(IUser iUser){
+    public void receiveReward(IUser iUser) {
         String url = "https://h5.moutai519.com.cn/game/xmTravel/receiveReward";
         HttpRequest request = HttpUtil.createRequest(Method.POST, url);
 
@@ -248,8 +258,29 @@ public class IMTServiceImpl implements IMTService {
         HttpResponse execute = request.execute();
         JSONObject body = JSONObject.parseObject(execute.body());
 
-        if(body.getInteger("code") != 2000){
+        if (body.getInteger("code") != 2000) {
             String message = "领取小茅运失败";
+            throw new ServiceException(message);
+        }
+    }
+
+    public void shareReward(IUser iUser) {
+        logger.info("「领取每日首次分享获取耐力」：" + iUser.getMobile());
+        String url = "https://h5.moutai519.com.cn/game/xmTravel/shareReward";
+        HttpRequest request = HttpUtil.createRequest(Method.POST, url);
+
+        request.header("MT-Device-ID", iUser.getDeviceId())
+                .header("MT-APP-Version", getMTVersion())
+                .header("User-Agent", "iOS;16.3;Apple;?unrecognized?")
+                .header("MT-Lat", iUser.getLat())
+                .header("MT-Lng", iUser.getLng())
+                .cookie("MT-Token-Wap=" + iUser.getCookie() + ";MT-Device-ID-Wap=" + iUser.getDeviceId() + ";");
+
+        HttpResponse execute = request.execute();
+        JSONObject body = JSONObject.parseObject(execute.body());
+
+        if (body.getInteger("code") != 2000) {
+            String message = "领取每日首次分享获取耐力失败";
             throw new ServiceException(message);
         }
     }
@@ -312,6 +343,8 @@ public class IMTServiceImpl implements IMTService {
             Double travelRewardXmy = getXmTravelReward(iUser);
             // 获取小茅运
             receiveReward(iUser);
+            //首次分享获取耐力
+            shareReward(iUser);
             //本次旅行奖励领取后, 当月实际剩余旅行奖励
             if (travelRewardXmy > currentPeriodCanConvertXmyNum) {
                 String message = "当月无可领取奖励";
@@ -530,7 +563,7 @@ public class IMTServiceImpl implements IMTService {
                     throw new ServiceException(message);
                 }
                 JSONArray itemVOs = jsonObject.getJSONObject("data").getJSONArray("reservationItemVOS");
-                if(Objects.isNull(itemVOs) || itemVOs.isEmpty()){
+                if (Objects.isNull(itemVOs) || itemVOs.isEmpty()) {
                     logger.info("申购记录为空: user->{}", iUser.getMobile());
                     continue;
                 }
@@ -543,7 +576,7 @@ public class IMTServiceImpl implements IMTService {
                     }
                 }
             } catch (Exception e) {
-                logger.error("查询申购结果失败:失败原因->{}", e.getMessage(),e);
+                logger.error("查询申购结果失败:失败原因->{}", e.getMessage(), e);
             }
 
         }
@@ -621,9 +654,9 @@ public class IMTServiceImpl implements IMTService {
      * @param content
      * @return
      */
-    private static String signature(String content) {
+    private static String signature(String content, long time) {
 
-        String text = SALT + content + System.currentTimeMillis();
+        String text = SALT + content + time;
         String md5 = "";
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
