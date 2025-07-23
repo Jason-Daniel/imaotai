@@ -5,7 +5,6 @@ import com.oddfar.campus.business.service.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -63,7 +62,7 @@ public class CampusIMTTask {
         try {
             imtService.refreshAll();
         } catch (Exception e) {
-            logger.info("「刷新数据执行报错」%s", e.getMessage());
+            logger.error("「刷新数据执行报错」{}", e.getMessage(), e);
         }
 
     }

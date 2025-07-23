@@ -17,10 +17,19 @@
     </properties>
 
     <dependencies>
+
         <dependency>
             <groupId>com.oddfar.campus</groupId>
             <artifactId>campus-admin</artifactId>
         </dependency>
+
+        <!--jaxb-api-->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>

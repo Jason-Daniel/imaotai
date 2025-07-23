@@ -185,33 +185,33 @@ public class IMTServiceImpl implements IMTService {
         }
         String[] items = iUser.getItemCode().split("@");
 
-        String logContent = "";
+        StringBuilder logContent = new StringBuilder();
         for (String itemId : items) {
             try {
                 String shopId = iShopService.getShopId(iUser.getShopType(), itemId,
                         iUser.getProvinceName(), iUser.getCityName(), iUser.getLat(), iUser.getLng());
                 //预约
                 JSONObject json = reservation(iUser, itemId, shopId);
-                logContent += String.format("[预约项目]：%s\n[shopId]：%s\n[结果返回]：%s\n\n", itemId, shopId, json.toString());
+                logContent.append(String.format("[预约项目]：%s\n[shopId]：%s\n[结果返回]：%s\n\n", itemId, shopId, json.toString()));
 
                 //随机延迟3～5秒
                 Random random = new Random();
                 int sleepTime = random.nextInt(3) + 3;
                 Thread.sleep(sleepTime * 1000);
             } catch (Exception e) {
-                logContent += String.format("执行报错--[预约项目]：%s\n[结果返回]：%s\n\n", itemId, e.getMessage());
+                logContent.append(String.format("执行报错--[预约项目]：%s\n[结果返回]：%s\n\n", itemId, e.getMessage()));
             }
         }
 
-//        try {
-//            //预约后领取耐力值
-//            String energyAward = getEnergyAward(iUser);
-//            logContent += "[申购耐力值]:" + energyAward;
-//        } catch (Exception e) {
-//            logContent += "执行报错--[申购耐力值]:" + e.getMessage();
-//        }
+        try {
+            //预约后领取耐力值
+            String energyAward = getEnergyAward(iUser);
+            logContent.append("[申购耐力值]:").append(energyAward);
+        } catch (Exception e) {
+            logContent.append("执行报错--[申购耐力值]:").append(e.getMessage());
+        }
         //日志记录
-        IMTLogFactory.reservation(iUser, logContent);
+        IMTLogFactory.reservation(iUser, logContent.toString());
         //预约后延迟领取耐力值
         getEnergyAwardDelay(iUser);
     }
@@ -501,11 +501,12 @@ public class IMTServiceImpl implements IMTService {
     @Async
     @Override
     public void reservationBatch() {
-        int minute = DateUtil.minute(new Date());
-        List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
+        // int minute = DateUtil.minute(new Date());
+        // List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
+        List<IUser> iUsers = iUserService.selectReservationUser();
 
         for (IUser iUser : iUsers) {
-            logger.info("「开始预约用户」" + iUser.getMobile());
+            logger.info("「开始预约用户」{}", iUser.getMobile());
             //预约
             reservation(iUser);
             //延时3秒
@@ -522,12 +523,12 @@ public class IMTServiceImpl implements IMTService {
     @Override
     public void getTravelRewardBatch() {
         try {
-            int minute = DateUtil.minute(new Date());
-            List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
-//        List<IUser> iUsers = iUserService.selectReservationUser();
+            //int minute = DateUtil.minute(new Date());
+            //List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
+            List<IUser> iUsers = iUserService.selectReservationUser();
 
             for (IUser iUser : iUsers) {
-                logger.info("「开始获得旅行奖励」" + iUser.getMobile());
+                logger.info("「开始获得旅行奖励」{}", iUser.getMobile());
                 getTravelReward(iUser);
                 //延时3秒
                 TimeUnit.SECONDS.sleep(3);
