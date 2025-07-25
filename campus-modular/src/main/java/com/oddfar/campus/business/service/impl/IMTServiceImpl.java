@@ -145,7 +145,7 @@ public class IMTServiceImpl implements IMTService {
         map.put("vCode", code);
 
         final long curTime = System.currentTimeMillis();
-        map.put("md5", signature(mobile + code + "" + "", curTime));
+        map.put("md5", signature(mobile + code, curTime));
 
         map.put("timestamp", String.valueOf(curTime));
         map.put("MT-APP-Version", getMTVersion());
@@ -203,13 +203,13 @@ public class IMTServiceImpl implements IMTService {
             }
         }
 
-        try {
+        /*try {
             //预约后领取耐力值
             String energyAward = getEnergyAward(iUser);
             logContent.append("[申购耐力值]:").append(energyAward);
         } catch (Exception e) {
             logContent.append("执行报错--[申购耐力值]:").append(e.getMessage());
-        }
+        }*/
         //日志记录
         IMTLogFactory.reservation(iUser, logContent.toString());
         //预约后延迟领取耐力值
@@ -501,9 +501,9 @@ public class IMTServiceImpl implements IMTService {
     @Async
     @Override
     public void reservationBatch() {
-        // int minute = DateUtil.minute(new Date());
-        // List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
-        List<IUser> iUsers = iUserService.selectReservationUser();
+        int minute = DateUtil.minute(new Date());
+        List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
+        //List<IUser> iUsers = iUserService.selectReservationUser();
 
         for (IUser iUser : iUsers) {
             logger.info("「开始预约用户」{}", iUser.getMobile());
@@ -523,9 +523,9 @@ public class IMTServiceImpl implements IMTService {
     @Override
     public void getTravelRewardBatch() {
         try {
-            //int minute = DateUtil.minute(new Date());
-            //List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
-            List<IUser> iUsers = iUserService.selectReservationUser();
+            int minute = DateUtil.minute(new Date());
+            List<IUser> iUsers = iUserService.selectReservationUserByMinute(minute);
+            //List<IUser> iUsers = iUserService.selectReservationUser();
 
             for (IUser iUser : iUsers) {
                 logger.info("「开始获得旅行奖励」{}", iUser.getMobile());
